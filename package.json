@@ -1,0 +1,21 @@
+{
+  "name": "stockcharts",
+  "version": "1.0.0",
+  "description": "This is a public repo",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "webpack --mode production"
+
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/learnscriptingorg/stockCharts.git"
+  },
+  "author": "SkillQuest",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/learnscriptingorg/stockCharts/issues"
+  },
+  "homepage": "https://github.com/learnscriptingorg/stockCharts#readme"
+}

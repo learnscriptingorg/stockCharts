@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Candlestick Chart Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    #chart-container {
+      width: 800px;
+      height: 600px;
+      border: 1px solid #ccc;
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Candlestick Chart Test</h1>
+  <div id="chart-container"></div>
+
+  <!-- Load the built library -->
+  <script src="../dist/charting-library.min.js"></script>
+
+  <!-- Import the dataset -->
+  <script type="module">
+    import { candlestickData } from '../data/data.js';
+
+    // Log the dataset to verify
+    console.log(candlestickData);
+
+    // Create and draw the candlestick chart
+    const chart = new ChartingLibrary.CandlestickChart('chart-container', candlestickData);
+    chart.draw();
+  </script>
+</body>
+</html>
