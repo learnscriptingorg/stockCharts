@@ -3,36 +3,135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Candlestick Chart Test</title>
+  <title>Stock Chart Example</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-    }
     #chart-container {
       width: 800px;
-      height: 600px;
-      border: 1px solid #ccc;
+      height: 400px;
       margin: 20px auto;
+      border: 1px solid #ccc;
+    }
+
+    .controls {
+      text-align: center;
+      margin: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    button {
+      padding: 8px 16px;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: white;
+    }
+
+    button:hover {
+      background: #f0f0f0;
+    }
+
+    button.active {
+      background-color: #1a73e8;
+      color: white;
+      border-color: #1a73e8;
+    }
+
+    select, input {
+      padding: 6px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    input[type="color"] {
+      padding: 0;
+      width: 40px;
+      height: 30px;
     }
   </style>
 </head>
 <body>
-  <h1>Candlestick Chart Test</h1>
   <div id="chart-container"></div>
+  <div class="controls">
+    <div class="control-group">
+      <button id="btnDraw">Toggle Draw Mode</button>
+      <button id="btnUndo">Undo</button>
+      <button id="btnRedo">Redo</button>
+      <button id="btnClear">Clear Lines</button>
+    </div>
+    <div class="control-group">
+      <select id="lineStyle">
+        <option value="solid">Solid</option>
+        <option value="dashed">Dashed</option>
+        <option value="dotted">Dotted</option>
+      </select>
+      <input type="number" id="lineWidth" value="2" min="1" max="10" style="width: 60px">
+      <input type="color" id="lineColor" value="#1a73e8">
+      <input type="text" id="lineLabel" placeholder="Add label" style="width: 100px">
+    </div>
+  </div>
 
-  <!-- Load the built library -->
+  <!-- Import the charting library -->
   <script src="../dist/charting-library.min.js"></script>
 
   <!-- Import the dataset -->
   <script type="module">
     import { candlestickData } from '../data/data.js';
 
-    // Log the dataset to verify
-    console.log(candlestickData);
-
     // Create and draw the candlestick chart
     const chart = new ChartingLibrary.CandlestickChart('chart-container', candlestickData);
     chart.draw();
+
+    const btnDraw = document.getElementById("btnDraw");
+    const btnClear = document.getElementById("btnClear");
+    const btnUndo = document.getElementById("btnUndo");
+    const btnRedo = document.getElementById("btnRedo");
+    const lineStyle = document.getElementById("lineStyle");
+    const lineWidth = document.getElementById("lineWidth");
+    const lineColor = document.getElementById("lineColor");
+    const lineLabel = document.getElementById("lineLabel");
+    let isDrawMode = false;
+
+    btnDraw.addEventListener("click", () => {
+      isDrawMode = !isDrawMode;
+      btnDraw.classList.toggle("active");
+      chart.drawLine(isDrawMode, {
+        color: lineColor.value,
+        width: parseInt(lineWidth.value),
+        style: lineStyle.value,
+        label: lineLabel.value
+      });
+      btnDraw.textContent = isDrawMode ? "Exit Draw Mode" : "Toggle Draw Mode";
+    });
+
+    btnClear.addEventListener("click", () => {
+      chart.lines = [];
+      localStorage.removeItem('chartLines');
+      chart.draw();
+    });
+
+    btnUndo.addEventListener("click", () => chart.undo());
+    btnRedo.addEventListener("click", () => chart.redo());
+
+    // Update line style when controls change
+    [lineStyle, lineWidth, lineColor, lineLabel].forEach(control => {
+      control.addEventListener("change", () => {
+        chart.setLineStyle({
+          color: lineColor.value,
+          width: parseInt(lineWidth.value),
+          style: lineStyle.value,
+          label: lineLabel.value
+        });
+      });
+    });
   </script>
 </body>
 </html>
