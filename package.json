@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "build": "webpack --mode production"
-
+    "build": "webpack --config webpack.config.js"
   },
   "repository": {
     "type": "git",
@@ -17,5 +16,12 @@
   "bugs": {
     "url": "https://github.com/learnscriptingorg/stockCharts/issues"
   },
-  "homepage": "https://github.com/learnscriptingorg/stockCharts#readme"
+  "homepage": "https://github.com/learnscriptingorg/stockCharts#readme",
+  "devDependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/preset-env": "^7.26.9",
+    "babel-loader": "^10.0.0",
+    "webpack": "^5.99.5",
+    "webpack-cli": "^6.0.1"
+  }
 }

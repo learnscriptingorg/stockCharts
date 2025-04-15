@@ -1,11 +1,25 @@
 import { ChartRenderer } from "../ChartRenderer";
+import { LineDrawingTool } from "../tools/LineDrawingTool";
+import { ChartDrawUtils } from "../utils/ChartDrawUtils";
 
+/**
+ * CandlestickChart class for rendering candlestick charts with drawing tools
+ * @extends ChartRenderer
+ */
 export class CandlestickChart extends ChartRenderer {
+  /**
+   * @param {HTMLCanvasElement} canvas - The canvas element
+   * @param {Array} data - Candlestick data array
+   */
   constructor(canvas, data) {
     super(canvas, data);
+    
+    // Chart display properties
     this.padding = 20;
     this.candleWidth = 10;
     this.spaceBetweenCandles = 5;
+    
+    // Zoom and pan properties
     this.scaleY = 1;
     this.offsetX = 0;
     this.minScale = 0.5;
@@ -13,13 +27,66 @@ export class CandlestickChart extends ChartRenderer {
     this.isDragging = false;
     this.lastMouseX = 0;
 
-    // Event listeners for zoom and scroll
+    // Initialize drawing tools and utilities
+    this.drawUtils = new ChartDrawUtils(this.ctx, {
+      width: this.canvas.width,
+      height: this.canvas.height
+    });
+
+    this.lineDrawingTool = new LineDrawingTool(
+      { color: "#1a73e8", width: 2, style: "solid" },
+      () => this.draw()
+    );
+
+    // Set up event listeners
+    this.setupEventListeners();
+  }
+
+  /**
+   * Set up canvas event listeners
+   */
+  setupEventListeners() {
     this.canvas.addEventListener("wheel", this.handleZoom.bind(this));
     this.canvas.addEventListener("mousedown", this.handleMouseDown.bind(this));
     this.canvas.addEventListener("mousemove", this.handleMouseMove.bind(this));
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
   }
 
+  /**
+   * Enable or disable line drawing mode
+   * @param {boolean} set - Whether to enable drawing mode
+   * @param {Object} options - Line style options
+   */
+  drawLine(set, options = {}) {
+    this.lineDrawingTool.setDrawingMode(set, options);
+  }
+
+  /**
+   * Undo last line drawing action
+   */
+  undo() {
+    this.lineDrawingTool.undo();
+  }
+
+  /**
+   * Redo last undone line drawing action
+   */
+  redo() {
+    this.lineDrawingTool.redo();
+  }
+
+  /**
+   * Update line drawing style
+   * @param {Object} style - New style properties
+   */
+  setLineStyle(style) {
+    this.lineDrawingTool.updateLineStyle(style);
+  }
+
+  /**
+   * Handle zoom events
+   * @param {WheelEvent} event - Wheel event
+   */
   handleZoom(event) {
     event.preventDefault();
     const zoomFactor = 1.1;
@@ -31,65 +98,95 @@ export class CandlestickChart extends ChartRenderer {
       this.scaleY = Math.max(this.scaleY / zoomFactor, this.minScale);
     }
 
-
     const zoomCenter = (mouseX - this.offsetX) / this.scaleY;
     this.offsetX = mouseX - zoomCenter * this.scaleY;
 
+    // Update line drawing tool scale and offset
+    this.lineDrawingTool.scale = { x: 1, y: this.scaleY };
+    this.lineDrawingTool.offset = { x: this.offsetX, y: 0 };
+
     this.draw();
   }
 
+  /**
+   * Handle mouse down events
+   * @param {MouseEvent} event - Mouse event
+   */
   handleMouseDown(event) {
-    this.isDragging = true;
-    this.lastMouseX = event.clientX;
+    const rect = this.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    const result = this.lineDrawingTool.handleMouseDown(x, y);
+    if (result.type === 'none') {
+      this.isDragging = true;
+      this.lastMouseX = event.clientX;
+    }
   }
 
+  /**
+   * Handle mouse move events
+   * @param {MouseEvent} event - Mouse event
+   */
   handleMouseMove(event) {
-    if (!this.isDragging) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
 
-    const dx = event.clientX - this.lastMouseX;
-    this.offsetX += dx;
-    this.lastMouseX = event.clientX;
-    
-    this.draw();
+    this.lineDrawingTool.handleMouseMove(x, y);
+
+    if (this.isDragging) {
+      const dx = event.clientX - this.lastMouseX;
+      this.offsetX += dx;
+      this.lastMouseX = event.clientX;
+      
+      // Update line drawing tool offset
+      this.lineDrawingTool.offset = { x: this.offsetX, y: 0 };
+      
+      this.draw();
+    }
   }
 
+  /**
+   * Handle mouse up events
+   */
   handleMouseUp() {
+    this.lineDrawingTool.handleMouseUp();
     this.isDragging = false;
   }
 
+  /**
+   * Draw the chart
+   */
   draw() {
-    this.clearCanvas();
-    this.drawAxes();
-    this.drawGrid();
+    this.drawUtils.clearCanvas();
+    this.drawUtils.drawGrid({ padding: this.padding });
+    this.drawUtils.drawAxes({ padding: this.padding });
 
-    const { data } = this;
-    const { ctx, canvas } = this;
-    const chartHeight = canvas.height - 2 * this.padding;
-    const chartWidth = canvas.width - 2 * this.padding;
-
-    const maxPrice = Math.max(...data.map((d) => d.high));
-    const minPrice = Math.min(...data.map((d) => d.low));
-    const priceRange = maxPrice - minPrice;
-    const adjustedScaleY = (chartHeight / priceRange) * this.scaleY;
-
-    data.forEach((candle, index) => {
-      const x = this.padding + index * (this.candleWidth + this.spaceBetweenCandles) + this.offsetX;
-      const yHigh = this.padding + (maxPrice - candle.high) * adjustedScaleY;
-      const yLow = this.padding + (maxPrice - candle.low) * adjustedScaleY;
-      const yOpen = this.padding + (maxPrice - candle.open) * adjustedScaleY;
-      const yClose = this.padding + (maxPrice - candle.close) * adjustedScaleY;
-
-      // Draw the wick
-      ctx.beginPath();
-      ctx.moveTo(x + this.candleWidth / 2, yHigh);
-      ctx.lineTo(x + this.candleWidth / 2, yLow);
-      ctx.strokeStyle = "black";
-      ctx.stroke();
-
-      // Draw the candle body
-      ctx.fillStyle = candle.open > candle.close ? "red" : "green";
-      ctx.fillRect(x, yOpen, this.candleWidth, yClose - yOpen);
+    const scale = this.drawUtils.calculateScale(this.data, {
+      padding: this.padding,
+      scaleY: this.scaleY
     });
+
+    // Draw candlesticks
+    this.data.forEach((candle, index) => {
+      const x = this.padding + index * (this.candleWidth + this.spaceBetweenCandles) + this.offsetX;
+      const yHigh = this.padding + (scale.maxPrice - candle.high) * scale.adjustedScaleY;
+      const yLow = this.padding + (scale.maxPrice - candle.low) * scale.adjustedScaleY;
+      const yOpen = this.padding + (scale.maxPrice - candle.open) * scale.adjustedScaleY;
+      const yClose = this.padding + (scale.maxPrice - candle.close) * scale.adjustedScaleY;
+
+      this.drawUtils.drawCandlestick(candle, {
+        x,
+        yHigh,
+        yLow,
+        yOpen,
+        yClose,
+        width: this.candleWidth
+      });
+    });
+
+    // Draw lines
+    this.lineDrawingTool.drawLines(this.ctx);
   }
 }
-
